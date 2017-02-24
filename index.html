@@ -1,0 +1,198 @@
+<html>
+<head>
+</head>
+<body style="margin: 0;">
+  <canvas id="canvas" style="width: 500px; height: 500px;" width="500" height="500"/>
+  <script>
+
+    const canvas = document.getElementById('canvas');
+    const context = canvas.getContext('2d');
+
+    const pixelSize = 10
+
+    let pixel = context.createImageData(1,1); // only do this once per page
+
+    context['imageSmoothingEnabled'] = false;       /* standard */
+    context['mozImageSmoothingEnabled'] = false;    /* Firefox */
+    context['oImageSmoothingEnabled'] = false;      /* Opera */
+    context['webkitImageSmoothingEnabled'] = false; /* Safari */
+    context['msImageSmoothingEnabled'] = false;
+
+    let board = [[]];
+
+    canvas.addEventListener('mousemove', event => {
+      // console.log(event);
+      const x = Math.floor(event.clientX / pixelSize);
+
+      const y = Math.floor(event.clientY / pixelSize);
+
+      ensureRow(y);
+      board[y][x] = true;
+
+
+    })
+
+    function ensureRow(y) {
+      board[y] = board[y] || [];
+      return board[y];
+    }
+
+    function setAlive(x, y) {
+      let row = board[x] || [];
+      board[x] = row;
+    }
+
+
+    function render() {
+      const r = 0;
+      const g = 0;
+      const b = 0;
+      const a = 255;
+
+      // const deadStyle = [255, 255, 255, 255];
+      // const aliveStyle = [0, 0, 0, 255];
+
+      const deadStyle = 'white';
+      const aliveStyle = 'black';
+      //"rgba("+r+","+g+","+b+","+(a/255)+")";
+
+
+
+      // context.fillStyle = deadStyle
+
+
+      board.forEach((row, y) => {
+        row.forEach((isAlive, x) => {
+          // if (isAlive) {
+          //   pixel.data[0] = 0;
+          //   pixel.data[1] = 0;
+          //   pixel.data[2] = 0;
+          //   pixel.data[3] = 255;
+          // } else {
+          //   pixel.data[0] = 255;
+          //   pixel.data[1] = 255;
+          //   pixel.data[2] = 255;
+          //   pixel.data[3] = 255;
+          // }
+          // pixel.data = isAlive ? aliveStyle : deadStyle;
+          // context.putImageData(pixel, x, y);
+          context.fillStyle = isAlive ? aliveStyle : deadStyle;
+          context.fillRect( x*pixelSize, y*pixelSize, pixelSize, pixelSize );
+        });
+      });
+
+
+    }
+
+    function safeGet(y, x) {
+      return (board[y] && board[y][x]) || false;
+    }
+
+    function tick() {
+      console.log('tick')
+      board.length = 50;
+      let newBoard = [[]];
+
+      for (let y = 0; y < 50; y++) {
+        ensureRow(y);
+
+        newBoard[y] = newBoard[y] || [];
+
+
+        for (let x = 0; x < 500; x++) {
+
+          let p = willLive(x, y)
+
+          newBoard[y][x] = p;
+
+
+
+
+          // row[y] = Math.random() > 0.5;
+        }
+
+      }
+
+      board = newBoard;
+      // board.forEach((row, x) => {
+      //   board.x = row || [];
+      //   row = board.x;
+      //
+      //   // row = row || []
+      //
+      //   row.length = 500;
+      //   // console.log(row);
+      //
+      //
+      //   // row.forEach((cell, i) => {
+      //   //
+      //   // })
+      // })
+    }
+
+    function willLive(x, y) {
+
+      const neighbour1 = safeGet(y-1, x-1);
+      const neighbour2 = safeGet(y-1, x);
+      const neighbour3 = safeGet(y-1, x+1);
+      const neighbour4 = safeGet(y, x-1);
+      const isAlive = safeGet(y, x);
+      const neighbour5 = safeGet(y, x+1);
+      const neighbour6 = safeGet(y+1, x-1);
+      const neighbour7 = safeGet(y+1, x);
+      const neighbour8 = safeGet(y+1, x+1);
+
+
+
+  const numberOfLiving =
+    Number(neighbour1) +
+    Number(neighbour2) +
+    Number(neighbour3) +
+    Number(neighbour4) +
+    Number(neighbour5) +
+    Number(neighbour6) +
+    Number(neighbour7) +
+    Number(neighbour8);
+
+    // if (numberOfLiving> 0 && cell) {
+    //
+    //   console.log(cell, numberOfLiving)
+    //   debugger;
+    // }
+
+    // console.log(numberOfLiving)
+
+    // Any live cell with fewer than two live neighbours dies, as if caused by underpopulation.
+    if (isAlive && numberOfLiving < 2) {
+      return false;
+    }
+    // Any live cell with two or three live neighbours lives on to the next generation.
+    if (isAlive && (numberOfLiving === 2 || numberOfLiving === 3)) {
+      return true;
+    }
+    // Any live cell with more than three live neighbours dies, as if by overpopulation.
+    if (isAlive && (numberOfLiving > 3)) {
+      return false;
+    }
+    // Any dead cell with exactly three live neighbours becomes a live cell, as if by reproduction.
+    if (!isAlive && (numberOfLiving === 3)) {
+      return true;
+    }
+}
+
+    setInterval(tick, 500);
+
+
+
+    function renderLoop() {
+      render();
+      requestAnimationFrame(renderLoop)
+    }
+
+    requestAnimationFrame(renderLoop)
+
+
+
+  </script>
+</body>
+</html>
