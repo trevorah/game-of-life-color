@@ -1,197 +1,208 @@
 <html>
 <head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 </head>
 <body style="margin: 0;">
-  <canvas id="canvas" style="width: 500px; height: 500px;" width="500" height="500"/>
+  <canvas id="big-canvas" style="width: 100%; height: 100%; position: fixed;"/>
   <script>
 
-    const canvas = document.getElementById('canvas');
-    const context = canvas.getContext('2d');
-
     const pixelSize = 10
+    const mutationFactor = 0.2;
 
-    let pixel = context.createImageData(1,1); // only do this once per page
-
-    context['imageSmoothingEnabled'] = false;       /* standard */
-    context['mozImageSmoothingEnabled'] = false;    /* Firefox */
-    context['oImageSmoothingEnabled'] = false;      /* Opera */
-    context['webkitImageSmoothingEnabled'] = false; /* Safari */
-    context['msImageSmoothingEnabled'] = false;
-
-    let board = [[]];
-
-    canvas.addEventListener('mousemove', event => {
-      // console.log(event);
-      const x = Math.floor(event.clientX / pixelSize);
-
-      const y = Math.floor(event.clientY / pixelSize);
-
-      ensureRow(y);
-      board[y][x] = true;
-
-
-    })
-
-    function ensureRow(y) {
-      board[y] = board[y] || [];
-      return board[y];
+    function Color(red, green, blue) {
+      this.red = Math.min(Math.max(red, 0), 255);
+      this.green = Math.min(Math.max(green, 0), 255);
+      this.blue = Math.min(Math.max(blue, 0), 255);
     }
 
-    function setAlive(x, y) {
-      let row = board[x] || [];
-      board[x] = row;
+    Color.prototype.toString = function() {
+      return "rgba(" +
+        Math.round(this.red) + ", " +
+        Math.round(this.green) + ", " +
+        Math.round(this.blue) + ", 255)";
     }
 
+    function Board(width, height) {
+      this._width = width || 0;
+      this._height = height || 0;
 
-    function render() {
-      const r = 0;
-      const g = 0;
-      const b = 0;
-      const a = 255;
-
-      // const deadStyle = [255, 255, 255, 255];
-      // const aliveStyle = [0, 0, 0, 255];
-
-      const deadStyle = 'white';
-      const aliveStyle = 'black';
-      //"rgba("+r+","+g+","+b+","+(a/255)+")";
-
-
-
-      // context.fillStyle = deadStyle
-
-
-      board.forEach((row, y) => {
-        row.forEach((isAlive, x) => {
-          // if (isAlive) {
-          //   pixel.data[0] = 0;
-          //   pixel.data[1] = 0;
-          //   pixel.data[2] = 0;
-          //   pixel.data[3] = 255;
-          // } else {
-          //   pixel.data[0] = 255;
-          //   pixel.data[1] = 255;
-          //   pixel.data[2] = 255;
-          //   pixel.data[3] = 255;
-          // }
-          // pixel.data = isAlive ? aliveStyle : deadStyle;
-          // context.putImageData(pixel, x, y);
-          context.fillStyle = isAlive ? aliveStyle : deadStyle;
-          context.fillRect( x*pixelSize, y*pixelSize, pixelSize, pixelSize );
-        });
-      });
-
-
+      this._cells = [[]];
+      this._cells.length = this._height;
+      this._cells.forEach(function(row) { row.length = this._width }, this);
     }
 
-    function safeGet(y, x) {
-      return (board[y] && board[y][x]) || false;
+    Board.prototype.resize = function(width, height) {
+      this._width = width;
+      this._height = height;
+
+      this._cells.length = this._height;
+      this._cells.forEach(function(row) { row.length = this._width }, this);
     }
 
-    function tick() {
-      console.log('tick')
-      board.length = 50;
-      let newBoard = [[]];
+    Board.prototype.getWidth = function() {
+      return this._width;
+    }
 
-      for (let y = 0; y < 50; y++) {
-        ensureRow(y);
+    Board.prototype.getHeight = function() {
+      return this._height;
+    }
 
-        newBoard[y] = newBoard[y] || [];
+    Board.prototype.getColor = function(x, y) {
+      return (this._cells[y] && this._cells[y][x]) || undefined;
+    }
 
+    Board.prototype.setColor = function(x, y, color) {
+      this._cells[y] = this._cells[y] || [];
+      this._cells[y][x] = color;
+    }
 
-        for (let x = 0; x < 500; x++) {
+    function tick(board) {
+      const height = board.getHeight();
+      const width = board.getWidth();
+      let nextBoard = new Board(width, height);
 
-          let p = willLive(x, y)
-
-          newBoard[y][x] = p;
-
-
-
-
-          // row[y] = Math.random() > 0.5;
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          nextBoard.setColor(x, y, nextColor(board, x, y));
         }
-
       }
 
-      board = newBoard;
-      // board.forEach((row, x) => {
-      //   board.x = row || [];
-      //   row = board.x;
-      //
-      //   // row = row || []
-      //
-      //   row.length = 500;
-      //   // console.log(row);
-      //
-      //
-      //   // row.forEach((cell, i) => {
-      //   //
-      //   // })
-      // })
+      return nextBoard;
     }
 
-    function willLive(x, y) {
+    function render(board, context) {
+      const height = board.getHeight();
+      const width = board.getWidth();
 
-      const neighbour1 = safeGet(y-1, x-1);
-      const neighbour2 = safeGet(y-1, x);
-      const neighbour3 = safeGet(y-1, x+1);
-      const neighbour4 = safeGet(y, x-1);
-      const isAlive = safeGet(y, x);
-      const neighbour5 = safeGet(y, x+1);
-      const neighbour6 = safeGet(y+1, x-1);
-      const neighbour7 = safeGet(y+1, x);
-      const neighbour8 = safeGet(y+1, x+1);
-
-
-
-  const numberOfLiving =
-    Number(neighbour1) +
-    Number(neighbour2) +
-    Number(neighbour3) +
-    Number(neighbour4) +
-    Number(neighbour5) +
-    Number(neighbour6) +
-    Number(neighbour7) +
-    Number(neighbour8);
-
-    // if (numberOfLiving> 0 && cell) {
-    //
-    //   console.log(cell, numberOfLiving)
-    //   debugger;
-    // }
-
-    // console.log(numberOfLiving)
-
-    // Any live cell with fewer than two live neighbours dies, as if caused by underpopulation.
-    if (isAlive && numberOfLiving < 2) {
-      return false;
-    }
-    // Any live cell with two or three live neighbours lives on to the next generation.
-    if (isAlive && (numberOfLiving === 2 || numberOfLiving === 3)) {
-      return true;
-    }
-    // Any live cell with more than three live neighbours dies, as if by overpopulation.
-    if (isAlive && (numberOfLiving > 3)) {
-      return false;
-    }
-    // Any dead cell with exactly three live neighbours becomes a live cell, as if by reproduction.
-    if (!isAlive && (numberOfLiving === 3)) {
-      return true;
-    }
-}
-
-    setInterval(tick, 500);
-
-
-
-    function renderLoop() {
-      render();
-      requestAnimationFrame(renderLoop)
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          const color = board.getColor(x, y);
+          context.fillStyle = color ? color.toString() : "white";
+          context.fillRect(x * pixelSize, y * pixelSize, pixelSize, pixelSize);
+        }
+      }
     }
 
-    requestAnimationFrame(renderLoop)
+    function resizeToMatch(board, canvasElement) {
+      canvasElement.width = canvasElement.clientWidth;
+      canvasElement.height = canvasElement.clientHeight;
 
+      const width = Math.ceil(canvasElement.width / pixelSize);
+      const height = Math.ceil(canvasElement.height / pixelSize);
 
+      board.resize(width, height);
+    }
+
+    function nextColor(board, x, y) {
+      const cellColor = board.getColor(x, y);
+      const neighbours = [
+        board.getColor(x-1, y-1),
+        board.getColor(x-1, y),
+        board.getColor(x-1, y+1),
+        board.getColor(x, y-1),
+        board.getColor(x, y+1),
+        board.getColor(x+1, y-1),
+        board.getColor(x+1, y),
+        board.getColor(x+1, y+1)
+      ];
+      const aliveNeighbours = neighbours.filter(function(neighbour) {
+        return !!neighbour;
+      });
+      const numberOfLiving = aliveNeighbours.length;
+
+      // Any live cell with fewer than two live neighbours dies, as if caused by underpopulation.
+      if (cellColor && numberOfLiving < 2) {
+        return undefined;
+      }
+      // Any live cell with two or three live neighbours lives on to the next generation.
+      if (cellColor && (numberOfLiving === 2 || numberOfLiving === 3)) {
+        return cellColor;
+      }
+      // Any live cell with more than three live neighbours dies, as if by overpopulation.
+      if (cellColor && (numberOfLiving > 3)) {
+        return undefined;
+      }
+      // Any dead cell with exactly three live neighbours becomes a live cell, as if by reproduction.
+      if (!cellColor && (numberOfLiving === 3)) {
+        return mutate(avarageColor(aliveNeighbours));
+      }
+    }
+
+    function avarageColor(colors) {
+      let count = colors.length;
+      let avg = colors.reduce(function(acc, color) {
+        return {
+          r: acc.r + (color.red / count),
+          g: acc.g + (color.green / count),
+          b: acc.b + (color.blue / count),
+        }
+      }, { r: 0, g: 0, b: 0 });
+
+      return new Color(avg.r, avg.g, avg.b);
+    }
+
+    function mutate(color) {
+      return new Color(
+        color.red * (1 + (randomBellCurve() * mutationFactor)),
+        color.green * (1 + (randomBellCurve() * mutationFactor)),
+        color.blue * (1 + (randomBellCurve() * mutationFactor))
+      );
+    }
+
+    // gives a random number with a rough bell curve distribution from -1 to 1
+    function randomBellCurve() {
+      return (Math.random() + Math.random() +
+              Math.random() + Math.random() +
+              Math.random() + Math.random() - 3) / 3;
+    }
+
+    function generateRainbowColor(timeInMillis) {
+      const x = timeInMillis / 200;
+      return new Color(
+        Math.sin(x + 0) * 127 + 128,
+        Math.sin(x + 2) * 127 + 128,
+        Math.sin(x + 4) * 127 + 128
+      );
+    }
+
+    ////////////////////
+
+    const bigCanvas = document.getElementById('big-canvas');
+    const context = bigCanvas.getContext('2d');
+    let board = new Board();
+
+    resizeToMatch(board, bigCanvas)
+
+    setInterval(function() {
+      board = tick(board);
+      requestAnimationFrame(function() { render(board, context) });
+    }, 200);
+
+    window.addEventListener('resize', function() {
+      resizeToMatch(board, bigCanvas);
+      requestAnimationFrame(function() { render(board, context) });
+    });
+
+    bigCanvas.addEventListener('mousemove', function(event) {
+      const color = generateRainbowColor(Date.now());
+      const x = Math.floor(event.clientX / pixelSize);
+      const y = Math.floor(event.clientY / pixelSize);
+      board.setColor(x, y, color);
+      requestAnimationFrame(function() { render(board, context) });
+    });
+
+    bigCanvas.addEventListener('touchmove', function(event) {
+      const color = generateRainbowColor(Date.now());
+      Array.prototype.slice.call(event.touches).forEach(function(touch) {
+        const x = Math.floor(touch.clientX / pixelSize);
+        const y = Math.floor(touch.clientY / pixelSize);
+        board.setColor(x, y, color);
+      });
+      requestAnimationFrame(function() { render(board, context) });
+    });
+
+    // disable pinch to zoom for better multitouch
+    document.addEventListener('gesturestart', function(e) { e.preventDefault() });
 
   </script>
 </body>
